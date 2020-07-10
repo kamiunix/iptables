@@ -6,25 +6,40 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <time.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 #include <libiptc/libiptc.h>
-//#include "iptables.h"
 
-int main(void)
+static int insert_rule(const char *table, 
+		       const char *chain, 
+		       unsigned int src, 
+		       int inverted_src, 
+		       unsigned int dest, 
+		       int inverted_dest, 
+		       const char *target)
 {
-	iptc_handle_t h;
-	const char *chain = NULL;
-	const char *tablename = "filter";
+	struct {       
+		struct ipt_entry entry;
+		struct xt_standard_target target;
+	} entry;  
+	struct xtc_handle *h;   
+	int ret = 1;    
 
-	h = iptc_init(tablename);
-	if ( !h )   {
-		printf("Error initializing: %s\n", iptc_strerror(errno));
-		exit(errno);
+	h = iptc_init(table);   
+	if (!h) {       
+		fprintf(stderr, "Could not init IPTC library: %s\n", iptc_strerror(errno));       
+		goto out;     
 	}
+	out:   
+		if (h)     iptc_free(h);    
+		return ret;
+}
 
-	for (chain = iptc_first_chain(&h); chain; chain = iptc_next_chain(&h))  {
-		printf("%s\n", chain);
-	}
 
-	exit(0);
-
+int main(int argc, char **argv) {   
+	unsigned int a, b;   
+       	inet_pton(AF_INET, "1.2.3.4", &a);  
+       	inet_pton(AF_INET, "4.3.2.1", &b);   
+       	insert_rule("filter", "INPUT", a, 0, b, 1, "DROP");   
+	return 0; 
 }
