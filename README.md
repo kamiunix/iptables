@@ -1,5 +1,5 @@
 ### Installing
 
 ```
-gcc iptables.c -liptc -lip4tc -lip6tc -ldl
+gcc iptables.c `pkg-config --cflags --libs libiptc` -ldl
 ```
