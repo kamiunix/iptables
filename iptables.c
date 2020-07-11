@@ -18,6 +18,49 @@
 
 #define IP_PARTS(n) IP_PARTS_NATIVE(ntohl(n))
 
+struct entry_t {       
+	struct ipt_entry entry;
+	struct xt_standard_target target;
+};  
+
+static void initialize_entry(struct entry_t *entry,
+			    unsigned int src, 
+			    int inverted_src, 
+			    unsigned int dest, 
+			    int inverted_dest, 
+			    const char *target) {
+
+	/* target */
+	entry->target.target.u.user.target_size = XT_ALIGN (sizeof (struct xt_standard_target));
+	strncpy (entry->target.target.u.user.name, target, sizeof (entry->target.target.u.user.name));
+
+	/* entry */
+	entry->entry.target_offset = sizeof (struct ipt_entry);
+	entry->entry.next_offset = entry->entry.target_offset + entry->target.target.u.user.target_size;
+
+	if (src) {
+		entry->entry.ip.src.s_addr = src;
+		entry->entry.ip.smsk.s_addr = 0xFFFFFFFF;
+		if (inverted_src) {
+			entry->entry.ip.invflags |= IPT_INV_SRCIP;
+		}
+	}
+
+	if (dest) {
+		entry->entry.ip.dst.s_addr  = dest;
+		entry->entry.ip.dmsk.s_addr = 0xFFFFFFFF;
+		if (inverted_dest)
+			entry->entry.ip.invflags |= IPT_INV_DSTIP;
+	}
+}
+
+
+static int cleanup(int ret, struct xtc_handle *h) {
+	if (h)
+		iptc_free (h);
+	return ret;
+}
+
 static void print_iface(const unsigned char *iface, const unsigned char *mask, int invert) {
 	unsigned int i;
 
@@ -141,16 +184,17 @@ static void print_rule(const struct ipt_entry *e,
 	printf("\n");
 }
 
-static void list_rules(const char *table) {
+static int list_rules(const char *table) {
 	struct xtc_handle *h;   
+	int ret = 1;
 	const struct ipt_entry *e;
 	const int counters = 1;
 	const char *chain = NULL;
+	
 	h = iptc_init(table);   
-
 	if (!h) {
 		fprintf(stderr, "Could not init IPTC library: %s\n", iptc_strerror(errno));       
-		exit(errno);
+		return cleanup(ret, h);
 	}
 
 	for (chain = iptc_first_chain(h); chain; chain = iptc_next_chain(h)) {
@@ -158,6 +202,9 @@ static void list_rules(const char *table) {
 			print_rule(e, h, chain, counters);  
 		}
 	}
+	ret = 0;
+	return cleanup(ret, h);
+
 }
 
 static int insert_rule(const char *table, 
@@ -168,60 +215,36 @@ static int insert_rule(const char *table,
 		int inverted_dest, 
 		const char *target)
 {
-	struct {       
-		struct ipt_entry entry;
-		struct xt_standard_target target;
-	} entry;  
+	//initalizing required structures and variables
 	struct xtc_handle *h;   
-	int ret = 1;    
+	struct entry_t entry;
 
+	//get iptables handle
 	h = iptc_init(table);   
 	if (!h) {       
 		fprintf(stderr, "Could not init IPTC library: %s\n", iptc_strerror(errno));       
-		goto out;     
+		return cleanup(errno, h);
 	}
 
-	memset (&entry, 0, sizeof (entry));
+	//create entry with given parameters
+	memset(&entry, 0, sizeof(entry));
+	initialize_entry(&entry, src, inverted_src, dest, inverted_dest, target);
 
-	/* target */
-	entry.target.target.u.user.target_size = XT_ALIGN (sizeof (struct xt_standard_target));
-	strncpy (entry.target.target.u.user.name, target, sizeof (entry.target.target.u.user.name));
-
-	/* entry */
-	entry.entry.target_offset = sizeof (struct ipt_entry);
-	entry.entry.next_offset = entry.entry.target_offset + entry.target.target.u.user.target_size;
-
-	if (src) {
-		entry.entry.ip.src.s_addr = src;
-		entry.entry.ip.smsk.s_addr = 0xFFFFFFFF;
-		if (inverted_src) {
-			entry.entry.ip.invflags |= IPT_INV_SRCIP;
-		}
-	}
-	if (dest) {
-		entry.entry.ip.dst.s_addr  = dest;
-		entry.entry.ip.dmsk.s_addr = 0xFFFFFFFF;
-		if (inverted_dest)
-			entry.entry.ip.invflags |= IPT_INV_DSTIP;
-	}
-
+	//insert rules in iptables
 	if (!iptc_append_entry (chain, (struct ipt_entry *) &entry, h)) {
 		fprintf (stderr, "Could not insert a rule in iptables (table %s): %s\n", table, iptc_strerror (errno));
-		goto out;
+		return cleanup(errno, h);
 	}
 
+	//commit changes to iptables
 	if (!iptc_commit (h)) {
 		fprintf (stderr, "Could not commit changes in iptables (table %s): %s\n", table, iptc_strerror (errno));
-		goto out;
+		return cleanup(errno, h);
 	}
 
-	ret = 0;
-out:
-	if (h)
-		iptc_free (h);
-
-	return ret;
+	return cleanup(0, h);
 }
+
 
 static int replace_rule(const char *table, 
 		const char *chain, 
@@ -232,61 +255,30 @@ static int replace_rule(const char *table,
 		const char *target,
 		unsigned int rulenum)
 {
-	struct {       
-		struct ipt_entry entry;
-		struct xt_standard_target target;
-	} entry;  
+	struct entry_t entry;
 	struct xtc_handle *h;   
-	int ret = 1;    
 
 	h = iptc_init(table);   
 	if (!h) {       
 		fprintf(stderr, "Could not init IPTC library: %s\n", iptc_strerror(errno));       
-		goto out;     
+		return cleanup(errno, h);
 	}
 
-	memset (&entry, 0, sizeof (entry));
-
-	/* target */
-	entry.target.target.u.user.target_size = XT_ALIGN (sizeof (struct xt_standard_target));
-	strncpy (entry.target.target.u.user.name, target, sizeof (entry.target.target.u.user.name));
-
-	/* entry */
-	entry.entry.target_offset = sizeof (struct ipt_entry);
-	entry.entry.next_offset = entry.entry.target_offset + entry.target.target.u.user.target_size;
-
-	if (src) {
-		entry.entry.ip.src.s_addr = src;
-		entry.entry.ip.smsk.s_addr = 0xFFFFFFFF;
-		if (inverted_src) {
-			entry.entry.ip.invflags |= IPT_INV_SRCIP;
-		}
-	}
-	if (dest) {
-		entry.entry.ip.dst.s_addr  = dest;
-		entry.entry.ip.dmsk.s_addr = 0xFFFFFFFF;
-		if (inverted_dest)
-			entry.entry.ip.invflags |= IPT_INV_DSTIP;
-	}
+	//create entry with given parameters
+	memset(&entry, 0, sizeof(entry));
+	initialize_entry(&entry, src, inverted_src, dest, inverted_dest, target);
 
 	if (!iptc_replace_entry (chain, (struct ipt_entry *) &entry, rulenum, h)) {
 		fprintf (stderr, "Could not insert a rule in iptables (table %s) at (rulenum : %u) %s\n", table, rulenum, iptc_strerror (errno));
-		goto out;
+		return cleanup(errno, h);
 	}
 
 	if (!iptc_commit (h)) {
 		fprintf (stderr, "Could not commit changes in iptables (table %s): %s\n", table, iptc_strerror (errno));
-		goto out;
+		return cleanup(errno, h);
 	}
 
-	ret = 0;
-out:
-	if (h)
-		iptc_free (h);
-
-	return ret;
-
-	
+	return cleanup(0, h);
 }
 
 static int delete_rule(const char *table, 
@@ -294,54 +286,48 @@ static int delete_rule(const char *table,
 		unsigned int rulenum)
 {
 	struct xtc_handle *h;   
-	int ret = 1;    
-
 	h = iptc_init(table);   
+
 	if (!h) {       
 		fprintf(stderr, "Could not init IPTC library: %s\n", iptc_strerror(errno));       
-		goto out;     
+		return cleanup(errno, h);
 	}
+
 	if (!iptc_delete_num_entry(chain, rulenum, h)) {
-		fprintf(stderr, "Could not init IPTC library: %s\n", iptc_strerror(errno));       
-		goto out;     
+		fprintf (stderr, "Could not delete entry in iptables (table %s) at (rulenum : %u) in (chain: %s) %s\n", table, rulenum, chain, iptc_strerror (errno));
+		return cleanup(errno, h);
 	}
+
 	if (!iptc_commit (h)) {
 		fprintf (stderr, "Could not commit changes in iptables (table %s): %s\n", table, iptc_strerror (errno));
-		goto out;
+		return cleanup(errno, h);
 	}
-	ret = 0;
-out:
-	if (h)
-		iptc_free (h);
 
-	return ret;
+	return cleanup(0, h);
 }
 
 static int clear_rules(const char *table,
 		const char *chain) 
 {
 	struct xtc_handle *h;   
-	int ret = 1;    
 
 	h = iptc_init(table);   
 	if (!h) {       
 		fprintf(stderr, "Could not init IPTC library: %s\n", iptc_strerror(errno));       
-		goto out;     
+		return cleanup(errno, h);
 	}
+
 	if (!iptc_flush_entries(chain, h)) {
-		fprintf(stderr, "Could not init IPTC library: %s\n", iptc_strerror(errno));       
-		goto out;     
+		fprintf (stderr, "Could not flush entries in iptables (table %s) in (chain: %s) %s\n", table, chain, iptc_strerror (errno));
+		return cleanup(errno, h);
 	}
+
 	if (!iptc_commit (h)) {
 		fprintf (stderr, "Could not commit changes in iptables (table %s): %s\n", table, iptc_strerror (errno));
-		goto out;
+		return cleanup(errno, h);
 	}
-	ret = 0;
-out:
-	if (h)
-		iptc_free (h);
 
-	return ret;
+	return cleanup(0, h);
 }
 
 
