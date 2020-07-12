@@ -1,34 +1,6 @@
-#include <getopt.h>
-#include <sys/errno.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dlfcn.h>
-#include <time.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <libiptc/libiptc.h>
+#include "iptables.h"
 
-#define IP_PARTS_NATIVE(n)      \
-	(unsigned int)((n)>>24)&0xFF,   \
-	(unsigned int)((n)>>16)&0xFF,   \
-	(unsigned int)((n)>>8)&0xFF,    \
-	(unsigned int)((n)&0xFF)
-
-#define IP_PARTS(n) IP_PARTS_NATIVE(ntohl(n))
-
-struct entry_t {       
-	struct ipt_entry entry;
-	struct xt_standard_target target;
-};  
-
-static void initialize_entry(struct entry_t *entry,
-			    unsigned int src, 
-			    int inverted_src, 
-			    unsigned int dest, 
-			    int inverted_dest, 
-			    const char *target) {
+static void initialize_entry(struct entry_t *entry, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, __u16 proto) {
 
 	/* target */
 	entry->target.target.u.user.target_size = XT_ALIGN (sizeof (struct xt_standard_target));
@@ -52,8 +24,11 @@ static void initialize_entry(struct entry_t *entry,
 		if (inverted_dest)
 			entry->entry.ip.invflags |= IPT_INV_DSTIP;
 	}
-}
 
+	if (proto > 0) {
+		entry->entry.ip.proto = proto;
+	}
+}
 
 static int cleanup(int ret, struct xtc_handle *h) {
 	if (h)
@@ -85,22 +60,7 @@ static void print_iface(const unsigned char *iface, const unsigned char *mask, i
 	printf(" ");
 }
 
-/* These are hardcoded backups in iptables.c, so they are safe */
-struct pprot {
-	char *name;
-	u_int8_t num;
-};
-
-static const struct pprot chain_protos[] = {
-	{ "tcp", IPPROTO_TCP },
-	{ "udp", IPPROTO_UDP },
-	{ "icmp", IPPROTO_ICMP },
-	{ "esp", IPPROTO_ESP },
-	{ "ah", IPPROTO_AH },
-};
-
-static void print_proto(u_int16_t proto, int invert)
-{
+static void print_proto(u_int16_t proto, int invert) {
 	if (proto) {
 		unsigned int i;
 		const char *invertstr = invert ? "! " : "";
@@ -117,8 +77,7 @@ static void print_proto(u_int16_t proto, int invert)
 }
 
 /* print a given ip including mask if neccessary */
-static void print_ip(u_int32_t ip, u_int32_t mask, int invert)
-{
+static void print_ip(u_int32_t ip, u_int32_t mask, int invert) {
 
 	printf("%s%u.%u.%u.%u",
 			invert ? "! " : "",
@@ -132,9 +91,7 @@ static void print_ip(u_int32_t ip, u_int32_t mask, int invert)
 
 /* We want this to be readable, so only print out neccessary fields.
  * Because that's the kind of world I want to live in.  */
-static void print_rule(const struct ipt_entry *e,
-		struct xtc_handle *h, const char *chain, int counters)
-{
+static void print_rule(const struct ipt_entry *e, struct xtc_handle *h, const char *chain, int counters) {
 	struct ipt_entry_target *t;
 	const char *target_name;
 
@@ -207,14 +164,7 @@ static int list_rules(const char *table) {
 
 }
 
-static int insert_rule(const char *table, 
-		const char *chain, 
-		unsigned int src, 
-		int inverted_src, 
-		unsigned int dest, 
-		int inverted_dest, 
-		const char *target)
-{
+static int insert_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target) {
 	//initalizing required structures and variables
 	struct xtc_handle *h;   
 	struct entry_t entry;
@@ -228,7 +178,7 @@ static int insert_rule(const char *table,
 
 	//create entry with given parameters
 	memset(&entry, 0, sizeof(entry));
-	initialize_entry(&entry, src, inverted_src, dest, inverted_dest, target);
+	initialize_entry(&entry, src, inverted_src, dest, inverted_dest, target, 0);
 
 	//insert rules in iptables
 	if (!iptc_append_entry (chain, (struct ipt_entry *) &entry, h)) {
@@ -246,15 +196,7 @@ static int insert_rule(const char *table,
 }
 
 
-static int replace_rule(const char *table, 
-		const char *chain, 
-		unsigned int src, 
-		int inverted_src, 
-		unsigned int dest, 
-		int inverted_dest, 
-		const char *target,
-		unsigned int rulenum)
-{
+static int replace_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, unsigned int rulenum) {
 	struct entry_t entry;
 	struct xtc_handle *h;   
 
@@ -266,7 +208,7 @@ static int replace_rule(const char *table,
 
 	//create entry with given parameters
 	memset(&entry, 0, sizeof(entry));
-	initialize_entry(&entry, src, inverted_src, dest, inverted_dest, target);
+	initialize_entry(&entry, src, inverted_src, dest, inverted_dest, target, 0);
 
 	if (!iptc_replace_entry (chain, (struct ipt_entry *) &entry, rulenum, h)) {
 		fprintf (stderr, "Could not insert a rule in iptables (table %s) at (rulenum : %u) %s\n", table, rulenum, iptc_strerror (errno));
@@ -281,10 +223,7 @@ static int replace_rule(const char *table,
 	return cleanup(0, h);
 }
 
-static int delete_rule(const char *table, 
-		const char *chain, 
-		unsigned int rulenum)
-{
+static int delete_rule(const char *table, const char *chain, unsigned int rulenum) {
 	struct xtc_handle *h;   
 	h = iptc_init(table);   
 
@@ -306,9 +245,7 @@ static int delete_rule(const char *table,
 	return cleanup(0, h);
 }
 
-static int clear_rules(const char *table,
-		const char *chain) 
-{
+static int clear_rules(const char *table, const char *chain) {
 	struct xtc_handle *h;   
 
 	h = iptc_init(table);   
