@@ -1,6 +1,6 @@
 #include "iptables.h"
 
-static void initialize_entry(struct entry_t *entry, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, __u16 proto) {
+void initialize_entry(struct entry_t *entry, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, __u16 proto) {
 
 	/* target */
 	entry->target.target.u.user.target_size = XT_ALIGN (sizeof (struct xt_standard_target));
@@ -30,13 +30,13 @@ static void initialize_entry(struct entry_t *entry, unsigned int src, int invert
 	}
 }
 
-static int cleanup(int ret, struct xtc_handle *h) {
+int cleanup(int ret, struct xtc_handle *h) {
 	if (h)
 		iptc_free (h);
 	return ret;
 }
 
-static void print_iface(const unsigned char *iface, const unsigned char *mask, int invert) {
+void print_iface(const unsigned char *iface, const unsigned char *mask, int invert) {
 	unsigned int i;
 
 	if (mask[0] == 0)
@@ -60,7 +60,7 @@ static void print_iface(const unsigned char *iface, const unsigned char *mask, i
 	printf(" ");
 }
 
-static void print_proto(u_int16_t proto, int invert) {
+void print_proto(u_int16_t proto, int invert) {
 	if (proto) {
 		unsigned int i;
 		const char *invertstr = invert ? "! " : "";
@@ -77,7 +77,7 @@ static void print_proto(u_int16_t proto, int invert) {
 }
 
 /* print a given ip including mask if neccessary */
-static void print_ip(u_int32_t ip, u_int32_t mask, int invert) {
+void print_ip(u_int32_t ip, u_int32_t mask, int invert) {
 
 	printf("%s%u.%u.%u.%u",
 			invert ? "! " : "",
@@ -91,7 +91,7 @@ static void print_ip(u_int32_t ip, u_int32_t mask, int invert) {
 
 /* We want this to be readable, so only print out neccessary fields.
  * Because that's the kind of world I want to live in.  */
-static void print_rule(const struct ipt_entry *e, struct xtc_handle *h, const char *chain, int counters) {
+void print_rule(const struct ipt_entry *e, struct xtc_handle *h, const char *chain, int counters) {
 	struct ipt_entry_target *t;
 	const char *target_name;
 
@@ -141,7 +141,7 @@ static void print_rule(const struct ipt_entry *e, struct xtc_handle *h, const ch
 	printf("\n");
 }
 
-static int list_rules(const char *table) {
+int list_rules(const char *table) {
 	struct xtc_handle *h;   
 	int ret = 1;
 	const struct ipt_entry *e;
@@ -164,7 +164,7 @@ static int list_rules(const char *table) {
 
 }
 
-static int insert_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target) {
+int insert_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target) {
 	//initalizing required structures and variables
 	struct xtc_handle *h;   
 	struct entry_t entry;
@@ -196,7 +196,7 @@ static int insert_rule(const char *table, const char *chain, unsigned int src, i
 }
 
 
-static int replace_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, unsigned int rulenum) {
+int replace_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, unsigned int rulenum) {
 	struct entry_t entry;
 	struct xtc_handle *h;   
 
@@ -223,7 +223,7 @@ static int replace_rule(const char *table, const char *chain, unsigned int src, 
 	return cleanup(0, h);
 }
 
-static int delete_rule(const char *table, const char *chain, unsigned int rulenum) {
+int delete_rule(const char *table, const char *chain, unsigned int rulenum) {
 	struct xtc_handle *h;   
 	h = iptc_init(table);   
 
@@ -245,7 +245,7 @@ static int delete_rule(const char *table, const char *chain, unsigned int rulenu
 	return cleanup(0, h);
 }
 
-static int clear_rules(const char *table, const char *chain) {
+int clear_rules(const char *table, const char *chain) {
 	struct xtc_handle *h;   
 
 	h = iptc_init(table);   
@@ -267,8 +267,8 @@ static int clear_rules(const char *table, const char *chain) {
 	return cleanup(0, h);
 }
 
-
-int main(int argc, char **argv) {   
+/*
+static int main(int argc, char **argv) {   
 	unsigned int a, b, c;   
 	inet_pton(AF_INET, "1.2.3.4", &a);  
 	inet_pton(AF_INET, "4.3.2.1", &b);   
@@ -292,3 +292,4 @@ int main(int argc, char **argv) {
 
 	return 0; 
 }
+*/
