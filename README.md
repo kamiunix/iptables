@@ -4,6 +4,13 @@
 gcc -o iptable main.c iptables.c parseargs.c `pkg-config --cflags --libs libiptc` -ldl
 ```
 
+### Requirements
+```
+libiptc-dev
+gcc
+pkg-config
+```
+
 ### Docker
 
 Docker container available from samuelct/iptables
