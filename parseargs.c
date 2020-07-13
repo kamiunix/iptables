@@ -27,6 +27,7 @@ void usage(char **argv) {
 	printf("  %s\n", "-r \t\tremove a rule at given index in table");
 	printf("  %s\n", "-l \t\tlist all rules in table");
 	printf("  %s\n", "-L \t\tlist all rules in table with given chain");
+	printf("  %s\n", "-T \t\ttest basic functionality of the application");
 }
 
 /*
