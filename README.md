@@ -4,12 +4,26 @@
 gcc -o iptable main.c iptables.c parseargs.c `pkg-config --cflags --libs libiptc` -ldl
 ```
 
-###Documentation
+### Docker
+
+Docker container available from samuelct/iptables
+
+```
+docker pull samuelct/iptables
+```
+
+make sure to run docker with special capabilities via --cap-add=NET_ADMIN with
+
+```
+docker run --cap-add=NET_ADMIN -it samuelct/iptables 
+```
+
+### Documentation
 
 this applicaiton can list (list_rules), add (insert_rule), modify (replace_rule) and delete (delete_rule) iptables rules, in multiple user defined chains. The four main functions that demonstrate functionality (in parentheses above) make use of multipple libiptc functions in /usr/include/libiptc/libiptc.h (iptc_first/next_chain and iptc_first/next_rule, iptc_append_entry, iptc_replace_entry, iptc_delete_num_entry (respectively)). 
 
 
-###Code Segments
+### Code Segments
 
 iptables.c
 
@@ -24,7 +38,7 @@ entry point of the program which makes calls to parseargs.c and iptables.c.
 
 
 
-###PostMortem
+### PostMortem
 
 The application currently only processes one action at a time and thus must be called multipple times if you want to add multipple rules or do multipple things. Adding an action queue of args_t structs would be a good way of processing multipple actions with one call. As time was running out and the problem definition did not specify if this was a requirement I opted to avoid doing this in favor of refactoring and documenting.
 
