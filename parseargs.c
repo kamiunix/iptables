@@ -1,5 +1,17 @@
+/**  
+ * @brief example use of libiptc to programaticaly edit firewall rules
+ *
+ * @author Samuel Champagne 
+ *
+ * Contact: sam.c.tur@gmail.com
+ */
+
 #include "parseargs.h"
 
+/*
+ * function to print usage of this application in the command line
+ * @param argv: arguments array passed to this application
+ */
 void usage(char **argv) {
 	printf("%s [OPTION] <VALUE>\n", argv[0]);
 	printf("  %s\n", "-t [ARG]\t\tTable to add entries to\n\t\t\t\tdefault:filter");
@@ -13,9 +25,23 @@ void usage(char **argv) {
 	printf("  %s\n", "-m \t\tchange a rule in table at given index with given rule");
 	printf("  %s\n", "-r \t\tremove a rule at given index in table");
 	printf("  %s\n", "-l \t\tlist all rules in table");
+	printf("  %s\n", "-L \t\tlist all rules in table with given chain");
 }
 
+/*
+ * main function that parses arguments and returns a passed args_t object populated
+ * @param args_t: argument object to be populated
+ * @param argc: count of number of arguments passed to this application
+ * @param argv: arguments array passed to this application
+ *
+ * @return int: successfull parsing returns a 0
+ *
+ * I've opted to populate default values for better demonstration of application functionality 
+ * but this could be refactored easily if desired.
+ */
 int parseargs(struct args_t *args, int argc, char **argv) {
+
+	//populate default values
 	args->table = "filter";
 	args->chain = "INPUT";
 	args->src = "1.2.3.4";
@@ -25,7 +51,8 @@ int parseargs(struct args_t *args, int argc, char **argv) {
 	args->rulenum = 0;
 
 	int c;
-	while ((c = getopt(argc, argv, "t:c:s:d:n:a:eimrl")) != -1) {
+	//loop to parse all arguments provided
+	while ((c = getopt(argc, argv, "t:c:s:d:n:a:eimrlL")) != -1) {
 		switch (c) {
 			case 't':
 				args->table = optarg;
@@ -60,6 +87,9 @@ int parseargs(struct args_t *args, int argc, char **argv) {
 			case 'l':
 				args->flag = 'l';
 				break;
+			case 'L':
+				args->flag = 'L';
+				break;
 			default:
 				usage(argv);
 				return 0;
@@ -67,6 +97,10 @@ int parseargs(struct args_t *args, int argc, char **argv) {
 	}
 }
 
+/*
+ * prints the detauls of a given args_t object in human readable format
+ * @param args: args_t object to print
+ */
 void print_args(struct args_t *args) {
 	printf("table: %s\n", args->table);
 	printf("chain: %s\n", args->chain);
@@ -76,16 +110,3 @@ void print_args(struct args_t *args) {
 	printf("flag: %c\n", args->flag);
 	printf("rulenum: %u\n", args->rulenum);
 }
-
-/*
-static int main(int argc, char **argv) {
-	struct args_t args;
-	memset(&args, 0, sizeof(args));
-
-	if (!parseargs(&args, argc, argv)) {
-		printf("%s\n", "Error parsing input");
-		return 1;
-	}
-	print_args(&args);
-}
-*/

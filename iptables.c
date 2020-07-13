@@ -1,5 +1,23 @@
+/**  
+ * @brief example use of libiptc to programaticaly edit firewall rules
+ *
+ * @author Samuel Champagne 
+ *
+ * Contact: sam.c.tur@gmail.com
+ */
+
 #include "iptables.h"
 
+/**
+ * Intializes the given entries parameters 
+ * @param entry_t: entry to populate
+ * @param src: source ip
+ * @param inverted_src: inverted source ip
+ * @param dest: destination ip
+ * @param inverted_dest: inverted destination ip
+ * @param target: the targeted action to be taken
+ * @param proto: protocol references in rule
+ */
 void initialize_entry(struct entry_t *entry, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, __u16 proto) {
 
 	/* target */
@@ -30,12 +48,24 @@ void initialize_entry(struct entry_t *entry, unsigned int src, int inverted_src,
 	}
 }
 
+/*
+ * cleansup memmory for the handler before exiting the application
+ * @param xtc_handle: handle to cleanup
+ * @param ret: return code to return
+ * @return: exit code of application
+ */
 int cleanup(int ret, struct xtc_handle *h) {
 	if (h)
 		iptc_free (h);
 	return ret;
 }
 
+/*
+ * function to print interface info
+ * @param iface: iface in question
+ * @param mask: mask to be applied to iface
+ * @param inverted: inversion value to be aplied
+ */
 void print_iface(const unsigned char *iface, const unsigned char *mask, int invert) {
 	unsigned int i;
 
@@ -60,6 +90,11 @@ void print_iface(const unsigned char *iface, const unsigned char *mask, int inve
 	printf(" ");
 }
 
+/*
+ * function to print protocol details
+ * @param proto: protocol in question
+ * @param inverted: inversion value to be applied
+ */
 void print_proto(u_int16_t proto, int invert) {
 	if (proto) {
 		unsigned int i;
@@ -76,7 +111,11 @@ void print_proto(u_int16_t proto, int invert) {
 	}
 }
 
-/* print a given ip including mask if neccessary */
+/* print a given ip including mask if neccessary 
+ * @param ip: ip to print
+ * @param mask: mask to be applied to ip
+ * @param invert: inversion to be applied
+ */
 void print_ip(u_int32_t ip, u_int32_t mask, int invert) {
 
 	printf("%s%u.%u.%u.%u",
@@ -89,8 +128,13 @@ void print_ip(u_int32_t ip, u_int32_t mask, int invert) {
 		printf(" ");
 }
 
-/* We want this to be readable, so only print out neccessary fields.
- * Because that's the kind of world I want to live in.  */
+/* 
+ * print the rule parameters of a given xtc_handle chain and entity 
+ * @param ipt_entry: entry to print
+ * @param xtc_handle: handle of iptc
+ * @param chain: chain of entry
+ * @param counters: counter of entry
+ */
 void print_rule(const struct ipt_entry *e, struct xtc_handle *h, const char *chain, int counters) {
 	struct ipt_entry_target *t;
 	const char *target_name;
@@ -141,9 +185,14 @@ void print_rule(const struct ipt_entry *e, struct xtc_handle *h, const char *cha
 	printf("\n");
 }
 
+/*
+ * print all rules of a given table
+ * @param table: table of which we want to print the rules
+ *
+ * @return int: successful if returns 0
+ */
 int list_rules(const char *table) {
 	struct xtc_handle *h;   
-	int ret = 1;
 	const struct ipt_entry *e;
 	const int counters = 1;
 	const char *chain = NULL;
@@ -159,11 +208,21 @@ int list_rules(const char *table) {
 			print_rule(e, h, chain, counters);  
 		}
 	}
-	ret = 0;
-	return cleanup(ret, h);
-
+	return cleanup(0, h);
 }
 
+/*
+ * Insert a rule to given chain in a table with given parameters
+ * @param table: table of chain
+ * @param chain: chain to add rule to
+ * @param src: source ip
+ * @param inverted_src: inverted source ip
+ * @param dest: destination ip
+ * @param inverted_dest: inverted destination ip
+ * @param target: the targeted action to be taken
+ *
+ * @return int: successful if returns 0
+ */
 int insert_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target) {
 	//initalizing required structures and variables
 	struct xtc_handle *h;   
@@ -196,6 +255,19 @@ int insert_rule(const char *table, const char *chain, unsigned int src, int inve
 }
 
 
+/*
+ * replace a rule to given chain in a table with given parameters at given location (int)
+ * @param table: table of chain
+ * @param chain: chain to add rule to
+ * @param src: source ip
+ * @param inverted_src: inverted source ip
+ * @param dest: destination ip
+ * @param inverted_dest: inverted destination ip
+ * @param target: the targeted action to be taken
+ * @param rulenum: index of rule to be changed
+ *
+ * @return int: successful if returns 0
+ */
 int replace_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, unsigned int rulenum) {
 	struct entry_t entry;
 	struct xtc_handle *h;   
@@ -223,6 +295,14 @@ int replace_rule(const char *table, const char *chain, unsigned int src, int inv
 	return cleanup(0, h);
 }
 
+/*
+ * delete a rule in given chain in a table at given location (int)
+ * @param table: table of chain
+ * @param chain: chain to add rule to
+ * @param rulenum: index of rule to be changed
+ *
+ * @return int: successful if returns 0
+ */
 int delete_rule(const char *table, const char *chain, unsigned int rulenum) {
 	struct xtc_handle *h;   
 	h = iptc_init(table);   
@@ -245,6 +325,13 @@ int delete_rule(const char *table, const char *chain, unsigned int rulenum) {
 	return cleanup(0, h);
 }
 
+/*
+ * clear all rules from a given table and chain
+ * @param table: table of chain
+ * @param chain: chain to add rule to
+ *
+ * @return int: successful if returns 0
+ */
 int clear_rules(const char *table, const char *chain) {
 	struct xtc_handle *h;   
 
@@ -266,30 +353,3 @@ int clear_rules(const char *table, const char *chain) {
 
 	return cleanup(0, h);
 }
-
-/*
-static int main(int argc, char **argv) {   
-	unsigned int a, b, c;   
-	inet_pton(AF_INET, "1.2.3.4", &a);  
-	inet_pton(AF_INET, "4.3.2.1", &b);   
-	inet_pton(AF_INET, "1.1.1.1", &c);   
-
-	clear_rules("filter", "INPUT");
-	list_rules("filter");
-
-	printf("%s\n", "inserting rules");
-	insert_rule("filter", "INPUT", a, 0, b, 1, "DROP");   
-	insert_rule("filter", "INPUT", a, 0, c, 1, "DROP");   
-	list_rules("filter");
-
-	printf("%s %u\n", "replacing rule", 1);
-	replace_rule("filter", "INPUT", a, 0, b, 1, "ACCEPT", 1);   
-	list_rules("filter");
-
-	printf("%s %u\n", "deleting rule", 0);
-	delete_rule("filter", "INPUT", 0);
-	list_rules("filter");
-
-	return 0; 
-}
-*/

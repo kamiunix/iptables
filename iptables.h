@@ -1,3 +1,11 @@
+/**  
+ * @brief example use of libiptc to programaticaly edit firewall rules
+ *
+ * @author Samuel Champagne 
+ *
+ * Contact: sam.c.tur@gmail.com
+ */
+
 #include <getopt.h>
 #include <sys/errno.h>
 #include <stdio.h>
@@ -18,16 +26,19 @@
 
 #define IP_PARTS(n) IP_PARTS_NATIVE(ntohl(n))
 
+ /* entry object that contains rule information */
 struct entry_t {       
 	struct ipt_entry entry;
 	struct xt_standard_target target;
 };  
 
+/* port information object as required by libiptc */
 struct pprot {
 	char *name;                                                                  
 	u_int8_t num;
 };
 
+/* port chain information object as required by libiptc */
 static const struct pprot chain_protos[] = {
 	{ "tcp", IPPROTO_TCP },
 	{ "udp", IPPROTO_UDP },
