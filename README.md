@@ -18,6 +18,12 @@ make sure to run docker with special capabilities via --cap-add=NET_ADMIN with
 docker run --cap-add=NET_ADMIN -it samuelct/iptables 
 ```
 
+iptables files are located in /root/iptables/
+
+```
+cd /root/iptables/
+```
+
 ### Documentation
 
 this applicaiton can list (list_rules), add (insert_rule), modify (replace_rule) and delete (delete_rule) iptables rules, in multiple user defined chains. The four main functions that demonstrate functionality (in parentheses above) make use of multipple libiptc functions in /usr/include/libiptc/libiptc.h (iptc_first/next_chain and iptc_first/next_rule, iptc_append_entry, iptc_replace_entry, iptc_delete_num_entry (respectively)). 
