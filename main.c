@@ -24,12 +24,12 @@ int test() {
 	list_rules("filter");
 
 	printf("%s\n", "inserting rules");
-	insert_rule("filter", "INPUT", a, 0, b, 1, "DROP");   
-	insert_rule("filter", "INPUT", a, 0, c, 1, "DROP");   
+	insert_rule("filter", "INPUT", a, 0, b, 1, "DROP", 0);   
+	insert_rule("filter", "INPUT", a, 0, c, 1, "DROP", 0);   
 	list_rules("filter");
 
 	printf("%s %u\n", "replacing rule", 1);
-	replace_rule("filter", "INPUT", a, 0, b, 1, "ACCEPT", 1);   
+	replace_rule("filter", "INPUT", a, 0, b, 1, "ACCEPT", 0, 1);   
 	list_rules("filter");
 
 	printf("%s %u\n", "deleting rule", 0);
@@ -51,6 +51,11 @@ int main(int argc, char **argv) {
 	struct args_t args;
 	memset(&args, 0, sizeof(args));
 
+	if (argc < 2) {
+		usage(argv);
+		return 0;
+	}
+
 	// parse all arguments and return 1 if it wasn't parsed properly
 	if (!parseargs(&args, argc, argv)) {
 		printf("%s\n", "Error parsing input");
@@ -60,6 +65,7 @@ int main(int argc, char **argv) {
 	// print all arguments received (and default values if not passed)
 	printf("%s\n", "Received arguments:");
 	print_args(&args);
+	printf("\n");
 
 	//change the ips to machine requirements
 	unsigned int src, dst;   
@@ -72,7 +78,7 @@ int main(int argc, char **argv) {
 	switch (args.flag) {
 		case 'i':
 			printf("%s\n", "inserting rule into table");
-			insert_rule(args.table, args.chain, src, 0, dst, 1, args.action);
+			insert_rule(args.table, args.chain, src, 0, dst, 1, args.action, args.prot);
 			break;
 		case 'c':
 			printf("%s\n", "clearing table");
@@ -82,15 +88,19 @@ int main(int argc, char **argv) {
 			printf("%s\n", "listing rules in table");
 			list_rules(args.table);
 			break;
+		case 'L':
+			printf("%s\n", "listing rules in table chain combo");
+			list_rules_chain(args.table, args.chain);
+			break;
 		case 'm':
 			printf("%s\n", "replacing rule in table at given location");
-			replace_rule(args.table, args.chain, src, 0, dst, 1, args.action, args.rulenum);
+			replace_rule(args.table, args.chain, src, 0, dst, 1, args.action, args.prot, args.rulenum);
 			break;
 		case 'r':
 			printf("%s\n", "deleting rule in table at given location");
 			delete_rule(args.table, args.chain, args.rulenum);
 			break;
-		case 't':
+		case 'T':
 			printf("%s\n", "testing all functions");
 			test();
 			break;

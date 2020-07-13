@@ -20,6 +20,7 @@ void usage(char **argv) {
 	printf("  %s\n", "-d [ARG]\t\tDestination IP of rule\n\t\t\t\tdefault:4.3.2.1");
 	printf("  %s\n", "-n [ARG]\t\tRulenum to remove or change [int]\n\t\t\t\tdefault:0");
 	printf("  %s\n", "-a [ARG]\t\taction to perform with given rule\n\t\t\t\tdefault:ACCEPT");
+	printf("  %s\n", "-p [ARG]\t\tport to apply filtering to\n\t\t\t\tdefault:0 = ANY");
 	printf("  %s\n", "-e \t\tempty a given table");
 	printf("  %s\n", "-i \t\tInsert a given rule into table");
 	printf("  %s\n", "-m \t\tchange a rule in table at given index with given rule");
@@ -51,8 +52,9 @@ int parseargs(struct args_t *args, int argc, char **argv) {
 	args->rulenum = 0;
 
 	int c;
+	
 	//loop to parse all arguments provided
-	while ((c = getopt(argc, argv, "t:c:s:d:n:a:eimrlL")) != -1) {
+	while ((c = getopt(argc, argv, "t:c:s:d:n:a:p:eimrlLT")) != -1) {
 		switch (c) {
 			case 't':
 				args->table = optarg;
@@ -72,6 +74,9 @@ int parseargs(struct args_t *args, int argc, char **argv) {
 			case 'a':
 				args->action = optarg;
 				break;
+			case 'p':
+				args->prot = (__u16) atoi(optarg);
+				break;
 			case 'e':
 				args->flag = 'e';
 				break;
@@ -90,6 +95,9 @@ int parseargs(struct args_t *args, int argc, char **argv) {
 			case 'L':
 				args->flag = 'L';
 				break;
+			case 'T':
+				args->flag = 'T';
+				break;
 			default:
 				usage(argv);
 				return 0;
@@ -106,6 +114,7 @@ void print_args(struct args_t *args) {
 	printf("chain: %s\n", args->chain);
 	printf("src: %s\n", args->src);
 	printf("dst: %s\n", args->dst);
+	printf("prot: %u\n", args->prot);
 	printf("action: %s\n", args->action);
 	printf("flag: %c\n", args->flag);
 	printf("rulenum: %u\n", args->rulenum);

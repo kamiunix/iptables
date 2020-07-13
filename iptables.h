@@ -6,6 +6,9 @@
  * Contact: sam.c.tur@gmail.com
  */
 
+#ifndef IPTABLES_FILE
+#define IPTABLES_FILE
+
 #include <getopt.h>
 #include <sys/errno.h>
 #include <stdio.h>
@@ -55,7 +58,10 @@ int cleanup(int ret, struct xtc_handle *h);
 
 void print_rule(const struct ipt_entry *e, struct xtc_handle *h, const char *chain, int counters);
 int list_rules(const char *table);
-int insert_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target);
-int replace_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, unsigned int rulenum);
+int list_rules_chain(const char *table, const char *chain);
+int insert_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, __u16 prot);
+int replace_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, __u16 prot, unsigned int rulenum);
 int delete_rule(const char *table, const char *chain, unsigned int rulenum);
 int clear_rules(const char *table, const char *chain);
+
+#endif

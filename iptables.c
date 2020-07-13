@@ -200,13 +200,37 @@ int list_rules(const char *table) {
 	h = iptc_init(table);   
 	if (!h) {
 		fprintf(stderr, "Could not init IPTC library: %s\n", iptc_strerror(errno));       
-		return cleanup(ret, h);
+		return cleanup(errno, h);
 	}
 
 	for (chain = iptc_first_chain(h); chain; chain = iptc_next_chain(h)) {
 		for (e = iptc_first_rule(chain, h); e; e = iptc_next_rule(e, h))  { 
 			print_rule(e, h, chain, counters);  
 		}
+	}
+	return cleanup(0, h);
+}
+
+/*
+ * print all rules of a given table chain combo
+ * @param table: table of which we want to print the rules
+ * @param chain: chain to print rules of
+ *
+ * @return int: successful if returns 0
+ */
+int list_rules_chain(const char *table, const char *chain) {
+	struct xtc_handle *h;   
+	const struct ipt_entry *e;
+	const int counters = 1;
+	
+	h = iptc_init(table);   
+	if (!h) {
+		fprintf(stderr, "Could not init IPTC library: %s\n", iptc_strerror(errno));       
+		return cleanup(errno, h);
+	}
+
+	for (e = iptc_first_rule(chain, h); e; e = iptc_next_rule(e, h))  { 
+		print_rule(e, h, chain, counters);  
 	}
 	return cleanup(0, h);
 }
@@ -219,11 +243,12 @@ int list_rules(const char *table) {
  * @param inverted_src: inverted source ip
  * @param dest: destination ip
  * @param inverted_dest: inverted destination ip
+ * @param prot: port to apply filter to 
  * @param target: the targeted action to be taken
  *
  * @return int: successful if returns 0
  */
-int insert_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target) {
+int insert_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, __u16 prot) {
 	//initalizing required structures and variables
 	struct xtc_handle *h;   
 	struct entry_t entry;
@@ -237,7 +262,7 @@ int insert_rule(const char *table, const char *chain, unsigned int src, int inve
 
 	//create entry with given parameters
 	memset(&entry, 0, sizeof(entry));
-	initialize_entry(&entry, src, inverted_src, dest, inverted_dest, target, 0);
+	initialize_entry(&entry, src, inverted_src, dest, inverted_dest, target, prot);
 
 	//insert rules in iptables
 	if (!iptc_append_entry (chain, (struct ipt_entry *) &entry, h)) {
@@ -264,11 +289,12 @@ int insert_rule(const char *table, const char *chain, unsigned int src, int inve
  * @param dest: destination ip
  * @param inverted_dest: inverted destination ip
  * @param target: the targeted action to be taken
+ * @param prot: port to apply filter to 
  * @param rulenum: index of rule to be changed
  *
  * @return int: successful if returns 0
  */
-int replace_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, unsigned int rulenum) {
+int replace_rule(const char *table, const char *chain, unsigned int src, int inverted_src, unsigned int dest, int inverted_dest, const char *target, __u16 prot, unsigned int rulenum) {
 	struct entry_t entry;
 	struct xtc_handle *h;   
 
@@ -280,7 +306,7 @@ int replace_rule(const char *table, const char *chain, unsigned int src, int inv
 
 	//create entry with given parameters
 	memset(&entry, 0, sizeof(entry));
-	initialize_entry(&entry, src, inverted_src, dest, inverted_dest, target, 0);
+	initialize_entry(&entry, src, inverted_src, dest, inverted_dest, target, prot);
 
 	if (!iptc_replace_entry (chain, (struct ipt_entry *) &entry, rulenum, h)) {
 		fprintf (stderr, "Could not insert a rule in iptables (table %s) at (rulenum : %u) %s\n", table, rulenum, iptc_strerror (errno));
