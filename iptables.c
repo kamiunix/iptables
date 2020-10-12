@@ -99,14 +99,11 @@ void print_proto(u_int16_t proto, int invert) {
 	if (proto) {
 		unsigned int i;
 		const char *invertstr = invert ? "! " : "";
-
 		for (i = 0; i < sizeof(chain_protos)/sizeof(struct pprot); i++)
 			if (chain_protos[i].num == proto) {
-				printf("-p %s%s ",
-						invertstr, chain_protos[i].name);
+				printf("-p %s%s ", invertstr, chain_protos[i].name);
 				return;
 			}
-
 		printf(" %s%u ", invertstr, proto);
 	}
 }
@@ -117,11 +114,7 @@ void print_proto(u_int16_t proto, int invert) {
  * @param invert: inversion to be applied
  */
 void print_ip(u_int32_t ip, u_int32_t mask, int invert) {
-
-	printf("%s%u.%u.%u.%u",
-			invert ? "! " : "",
-			IP_PARTS(ip));
-
+	printf("%s%u.%u.%u.%u", invert ? "! " : "", IP_PARTS(ip));
 	if (mask != 0xffffffff)
 		printf("/%u.%u.%u.%u ", IP_PARTS(mask));
 	else
@@ -143,24 +136,14 @@ void print_rule(const struct ipt_entry *e, struct xtc_handle *h, const char *cha
 	printf("%s ", chain);
 
 	/* Print IP part. */
-	print_ip(e->ip.src.s_addr,e->ip.smsk.s_addr,
-			e->ip.invflags & IPT_INV_SRCIP);
-
-	print_ip(e->ip.dst.s_addr, e->ip.dmsk.s_addr,
-			e->ip.invflags & IPT_INV_DSTIP);
-
-	print_iface(e->ip.iniface, e->ip.iniface_mask,
-			e->ip.invflags & IPT_INV_VIA_IN);
-
-	print_iface(e->ip.outiface, e->ip.outiface_mask,
-			e->ip.invflags & IPT_INV_VIA_OUT);
-
+	print_ip(e->ip.src.s_addr,e->ip.smsk.s_addr, e->ip.invflags & IPT_INV_SRCIP);
+	print_ip(e->ip.dst.s_addr, e->ip.dmsk.s_addr, e->ip.invflags & IPT_INV_DSTIP);
+	print_iface(e->ip.iniface, e->ip.iniface_mask, e->ip.invflags & IPT_INV_VIA_IN);
+	print_iface(e->ip.outiface, e->ip.outiface_mask, e->ip.invflags & IPT_INV_VIA_OUT);
 	print_proto(e->ip.proto, e->ip.invflags & IPT_INV_PROTO);
 
 	if (e->ip.flags & IPT_F_FRAG)
-		printf("%s",
-				e->ip.invflags & IPT_INV_FRAG ? "! " : "");
-
+		printf("%s", e->ip.invflags & IPT_INV_FRAG ? "! " : "");
 
 	/* Print target name */
 	target_name = iptc_get_target(e, h);
@@ -174,11 +157,8 @@ void print_rule(const struct ipt_entry *e, struct xtc_handle *h, const char *cha
 		/* If the target size is greater than ipt_entry_target
 		 * there is something to be saved, we just don't know
 		 * how to print it */
-		if (t->u.target_size !=
-				sizeof(struct ipt_entry_target)) {
-			fprintf(stderr, "Target `%s' is missing "
-					"save function\n",
-					t->u.user.name);
+		if (t->u.target_size != sizeof(struct ipt_entry_target)) {
+			fprintf(stderr, "Target `%s' is missing save function\n", t->u.user.name);
 			exit(1);
 		}
 	}
